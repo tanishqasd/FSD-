@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notes App</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar: 260px;
+      --accent: #6c63ff;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      background: #1e1e2e;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #cdd6f4;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar);
+      background: #181825;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #2a2a3e;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid #2a2a3e;
+    }
+
+    .app-title { font-size: 1.1rem; font-weight: 700; color: #cdd6f4; margin-bottom: 14px; }
+
+    .new-note-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .new-note-btn:hover { background: #5a52d5; }
+
+    .search-box {
+      padding: 12px 16px;
+      border-bottom: 1px solid #2a2a3e;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 9px 12px;
+      background: #2a2a3e;
+      border: none;
+      border-radius: 8px;
+      color: #cdd6f4;
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .search-box input::placeholder { color: #585b70; }
+
+    .notes-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .note-item {
+      padding: 14px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      border-left: 3px solid transparent;
+      transition: background 0.15s;
+    }
+
+    .note-item:hover { background: #2a2a3e; }
+    .note-item.active { background: #2a2a3e; border-left-color: var(--accent); }
+
+    .note-item-title { font-size: 0.9rem; font-weight: 600; color: #cdd6f4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .note-item-preview { font-size: 0.78rem; color: #585b70; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .note-item-date { font-size: 0.72rem; color: #45475a; margin-top: 4px; }
+
+    .note-count { padding: 8px 16px; font-size: 0.75rem; color: #585b70; border-top: 1px solid #2a2a3e; }
+
+    /* Editor */
+    .editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .editor-toolbar {
+      padding: 16px 28px;
+      border-bottom: 1px solid #2a2a3e;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .editor-meta { font-size: 0.8rem; color: #585b70; }
+
+    .toolbar-actions { display: flex; gap: 10px; }
+
+    .tool-btn {
+      padding: 7px 14px;
+      background: #2a2a3e;
+      border: none;
+      border-radius: 6px;
+      color: #cdd6f4;
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .tool-btn:hover { background: #313244; }
+    .tool-btn.danger:hover { background: rgba(243,76,76,0.2); color: #f34c4c; }
+
+    .editor-title-input {
+      width: 100%;
+      padding: 20px 28px 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #cdd6f4;
+      font-family: inherit;
+    }
+
+    .editor-title-input::placeholder { color: #45475a; }
+
+    .editor-content {
+      flex: 1;
+      padding: 16px 28px 28px;
+      font-size: 1rem;
+      line-height: 1.7;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      color: #bac2de;
+      font-family: inherit;
+    }
+
+    .editor-content::placeholder { color: #45475a; }
+
+    /* Welcome screen */
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #45475a;
+      gap: 12px;
+    }
+
+    .welcome-icon { font-size: 3rem; }
+    .welcome h2 { font-size: 1.2rem; color: #585b70; }
+    .welcome p { font-size: 0.9rem; }
+
+    /* Tag pill */
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      background: rgba(108,99,255,0.2);
+      color: var(--accent);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="app-title">📝 Notes</div>
+    <button class="new-note-btn" onclick="newNote()">+ New Note</button>
+  </div>
+  <div class="search-box">
+    <input type="text" id="search" placeholder="Search notes..." oninput="renderList()"/>
+  </div>
+  <div class="notes-list" id="notes-list"></div>
+  <div class="note-count" id="note-count">0 notes</div>
+</aside>
+
+<!-- Editor -->
+<main class="editor" id="editor">
+  <div class="welcome" id="welcome">
+    <div class="welcome-icon">📒</div>
+    <h2>Select a note to edit</h2>
+    <p>or create a new one with the button above</p>
+  </div>
+  <div id="edit-area" style="display:none; flex-direction:column; flex:1; overflow:hidden; display:none">
+    <div class="editor-toolbar">
+      <span class="editor-meta" id="editor-meta">Last edited just now</span>
+      <div class="toolbar-actions">
+        <button class="tool-btn" onclick="duplicateNote()">Duplicate</button>
+        <button class="tool-btn danger" onclick="deleteNote()">Delete</button>
+      </div>
+    </div>
+    <input class="editor-title-input" id="note-title" placeholder="Note title..." oninput="saveActive()"/>
+    <textarea class="editor-content" id="note-body" placeholder="Start writing your note here...
+
+Use it for:
+• Ideas and thoughts
+• Meeting notes
+• To-do lists
+• Code snippets" oninput="saveActive()"></textarea>
+  </div>
+</main>
+
+<script>
+  let notes = JSON.parse(localStorage.getItem('notes-app-v1') || '[]');
+  let activeId = null;
+
+  function save() { localStorage.setItem('notes-app-v1', JSON.stringify(notes)); }
+
+  function newNote() {
+    const note = {
+      id: Date.now(),
+      title: '',
+      body: '',
+      updatedAt: new Date().toISOString()
+    };
+    notes.unshift(note);
+    save();
+    renderList();
+    selectNote(note.id);
+    document.getElementById('note-title').focus();
+  }
+
+  function selectNote(id) {
+    activeId = id;
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+
+    document.getElementById('welcome').style.display = 'none';
+    const ea = document.getElementById('edit-area');
+    ea.style.display = 'flex';
+    ea.style.flexDirection = 'column';
+    ea.style.flex = '1';
+    ea.style.overflow = 'hidden';
+
+    document.getElementById('note-title').value = note.title;
+    document.getElementById('note-body').value  = note.body;
+    updateMeta(note);
+    renderList();
+  }
+
+  function saveActive() {
+    if (!activeId) return;
+    const note = notes.find(n => n.id === activeId);
+    if (!note) return;
+    note.title     = document.getElementById('note-title').value;
+    note.body      = document.getElementById('note-body').value;
+    note.updatedAt = new Date().toISOString();
+    // Move to top
+    notes = [note, ...notes.filter(n => n.id !== activeId)];
+    save();
+    updateMeta(note);
+    renderList();
+  }
+
+  function deleteNote() {
+    if (!activeId) return;
+    if (!confirm('Delete this note?')) return;
+    notes = notes.filter(n => n.id !== activeId);
+    activeId = null;
+    save();
+    renderList();
+    document.getElementById('welcome').style.display = 'flex';
+    document.getElementById('edit-area').style.display = 'none';
+  }
+
+  function duplicateNote() {
+    const note = notes.find(n => n.id === activeId);
+    if (!note) return;
+    const copy = { ...note, id: Date.now(), title: note.title + ' (copy)', updatedAt: new Date().toISOString() };
+    notes.unshift(copy);
+    save();
+    renderList();
+    selectNote(copy.id);
+  }
+
+  function updateMeta(note) {
+    const d = new Date(note.updatedAt);
+    document.getElementById('editor-meta').textContent =
+      'Last edited ' + d.toLocaleDateString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+  }
+
+  function renderList() {
+    const query = document.getElementById('search').value.toLowerCase();
+    const filtered = notes.filter(n =>
+      n.title.toLowerCase().includes(query) || n.body.toLowerCase().includes(query)
+    );
+
+    const list = document.getElementById('notes-list');
+    list.innerHTML = filtered.map(n => {
+      const preview = (n.body || 'Empty note...').slice(0, 60).replace(/\n/g, ' ');
+      const d = new Date(n.updatedAt);
+      const dateStr = d.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+      return `
+        <div class="note-item ${n.id === activeId ? 'active' : ''}" onclick="selectNote(${n.id})">
+          <div class="note-item-title">${n.title || 'Untitled'}</div>
+          <div class="note-item-preview">${preview}</div>
+          <div class="note-item-date">${dateStr}</div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('note-count').textContent =
+      `${filtered.length} note${filtered.length !== 1 ? 's' : ''}`;
+  }
+
+  // Init
+  if (notes.length > 0) {
+    renderList();
+  } else {
+    // Create a sample note
+    newNote();
+    setTimeout(() => {
+      document.getElementById('note-title').value = 'Welcome to Notes! 👋';
+      document.getElementById('note-body').value =
+        'This is your personal notes app.\n\nFeatures:\n• Create, edit, and delete notes\n• Notes auto-save as you type\n• Search through all your notes\n• Duplicate any note\n• Data is saved in your browser\n\nStart typing to edit this note!';
+      saveActive();
+    }, 50);
+  }
+</script>
+
+</body>
+</html>

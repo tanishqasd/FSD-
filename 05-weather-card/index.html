@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather Card</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #e8eaf0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .search-row input {
+      flex: 1;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      outline: none;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .search-row button {
+      padding: 14px 20px;
+      background: #4361ee;
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+
+    .card-top {
+      background: linear-gradient(135deg, #4361ee, #7209b7);
+      padding: 36px 30px 28px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-top::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .location { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+    .local-time { font-size: 0.85rem; opacity: 0.65; margin-bottom: 24px; }
+
+    .temp-row { display: flex; align-items: flex-start; gap: 16px; }
+
+    .temp {
+      font-size: 5rem;
+      font-weight: 200;
+      line-height: 1;
+    }
+
+    .temp sup { font-size: 1.5rem; vertical-align: super; }
+
+    .weather-icon { font-size: 4rem; }
+    .condition { font-size: 1.1rem; margin-top: 8px; opacity: 0.85; }
+
+    .card-bottom {
+      background: #fff;
+      padding: 24px 30px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .stat { }
+    .stat-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-value { font-size: 1.2rem; font-weight: 600; color: #1a1a2e; margin-top: 4px; }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      max-width: 420px;
+      width: 100%;
+      display: none;
+    }
+
+    .loading { color: #888; font-size: 0.95rem; display: none; }
+
+    /* API note */
+    .api-note {
+      max-width: 420px;
+      font-size: 0.8rem;
+      color: #999;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .api-note a { color: #4361ee; }
+  </style>
+</head>
+<body>
+
+  <div class="search-row">
+    <input type="text" id="city-input" placeholder="Enter city name..." value="London"/>
+    <button onclick="fetchWeather()">Search</button>
+  </div>
+
+  <div class="loading" id="loading">Fetching weather...</div>
+  <div class="error" id="error"></div>
+
+  <div class="card" id="card" style="display:none">
+    <div class="card-top">
+      <div class="location" id="location">---</div>
+      <div class="local-time" id="local-time">---</div>
+      <div class="temp-row">
+        <div>
+          <div class="temp"><span id="temp">--</span><sup>°C</sup></div>
+          <div class="condition" id="condition">---</div>
+        </div>
+        <div class="weather-icon" id="icon">🌤</div>
+      </div>
+    </div>
+    <div class="card-bottom">
+      <div class="stat">
+        <div class="stat-label">Feels Like</div>
+        <div class="stat-value" id="feels-like">--°C</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Humidity</div>
+        <div class="stat-value" id="humidity">--%</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Wind Speed</div>
+        <div class="stat-value" id="wind">-- km/h</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Visibility</div>
+        <div class="stat-value" id="visibility">-- km</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="api-note">
+    ⚠️ This uses the <strong>Open-Meteo</strong> free weather API (no key needed) + geocoding.<br/>
+    Enter a city and click Search.
+  </p>
+
+<script>
+  const ICONS = {
+    0: '☀️', 1: '🌤', 2: '⛅', 3: '☁️',
+    45: '🌫', 48: '🌫', 51: '🌦', 53: '🌦', 55: '🌧',
+    61: '🌧', 63: '🌧', 65: '🌧', 71: '🌨', 73: '🌨', 75: '❄️',
+    77: '❄️', 80: '🌦', 81: '🌧', 82: '⛈', 85: '🌨', 86: '❄️',
+    95: '⛈', 96: '⛈', 99: '⛈'
+  };
+
+  const CONDITIONS = {
+    0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
+    45:'Foggy', 48:'Icy fog', 51:'Light drizzle', 53:'Drizzle', 55:'Heavy drizzle',
+    61:'Slight rain', 63:'Rain', 65:'Heavy rain', 71:'Light snow', 73:'Snow', 75:'Heavy snow',
+    77:'Snow grains', 80:'Showers', 81:'Rain showers', 82:'Violent showers',
+    85:'Snow showers', 86:'Heavy snow showers', 95:'Thunderstorm', 96:'Thunderstorm + hail', 99:'Severe thunderstorm'
+  };
+
+  async function fetchWeather() {
+    const city = document.getElementById('city-input').value.trim();
+    if (!city) return;
+
+    showLoading(true);
+    showError('');
+    document.getElementById('card').style.display = 'none';
+
+    try {
+      // Step 1: Geocode
+      const geoRes = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`
+      );
+      const geoData = await geoRes.json();
+      if (!geoData.results || geoData.results.length === 0) throw new Error('City not found');
+
+      const { name, country, latitude, longitude, timezone } = geoData.results[0];
+
+      // Step 2: Weather
+      const wxRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+        `&current_weather=true&hourly=relativehumidity_2m,apparent_temperature,visibility,windspeed_10m` +
+        `&timezone=auto&forecast_days=1`
+      );
+      const wxData = await wxRes.json();
+      const cw = wxData.current_weather;
+      const hr = wxData.hourly;
+      const idx = hr.time.findIndex(t => t === cw.time.slice(0,13) + ':00');
+      const safeIdx = idx >= 0 ? idx : 0;
+
+      // Display
+      document.getElementById('location').textContent = `${name}, ${country}`;
+      document.getElementById('local-time').textContent = new Date(cw.time).toLocaleString();
+      document.getElementById('temp').textContent = Math.round(cw.temperature);
+      document.getElementById('condition').textContent = CONDITIONS[cw.weathercode] || 'Unknown';
+      document.getElementById('icon').textContent = ICONS[cw.weathercode] || '🌤';
+      document.getElementById('feels-like').textContent = `${Math.round(hr.apparent_temperature[safeIdx])}°C`;
+      document.getElementById('humidity').textContent = `${hr.relativehumidity_2m[safeIdx]}%`;
+      document.getElementById('wind').textContent = `${Math.round(cw.windspeed)} km/h`;
+      document.getElementById('visibility').textContent = `${(hr.visibility[safeIdx] / 1000).toFixed(1)} km`;
+
+      document.getElementById('card').style.display = 'block';
+    } catch (err) {
+      showError(err.message || 'Something went wrong. Please try again.');
+    }
+    showLoading(false);
+  }
+
+  function showLoading(v) { document.getElementById('loading').style.display = v ? 'block' : 'none'; }
+  function showError(msg) {
+    const el = document.getElementById('error');
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  document.getElementById('city-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchWeather();
+  });
+
+  fetchWeather();
+</script>
+
+</body>
+</html>

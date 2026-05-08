@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quiz App</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 20px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 40px;
+      width: 100%;
+      max-width: 600px;
+      color: #fff;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      margin-bottom: 30px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #e94560;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 24px;
+    }
+
+    .question {
+      font-size: 1.3rem;
+      font-weight: 600;
+      line-height: 1.5;
+      margin-bottom: 28px;
+      color: #fff;
+    }
+
+    .options { display: flex; flex-direction: column; gap: 12px; }
+
+    .option-btn {
+      width: 100%;
+      padding: 16px 20px;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      font-size: 1rem;
+      font-family: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .option-btn.correct {
+      background: rgba(46, 213, 115, 0.25);
+      border-color: #2ed573;
+    }
+
+    .option-btn.wrong {
+      background: rgba(233, 69, 96, 0.25);
+      border-color: #e94560;
+    }
+
+    .option-btn:disabled { cursor: default; }
+
+    .feedback {
+      margin-top: 20px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      min-height: 50px;
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.8);
+      display: none;
+    }
+
+    .next-btn {
+      margin-top: 24px;
+      width: 100%;
+      padding: 16px;
+      background: #e94560;
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: none;
+      transition: background 0.2s;
+    }
+
+    .next-btn:hover { background: #c7334f; }
+
+    /* Result screen */
+    .result-screen { text-align: center; display: none; }
+
+    .score-circle {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: conic-gradient(#e94560 var(--pct), rgba(255,255,255,0.1) 0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      position: relative;
+    }
+
+    .score-circle::before {
+      content: '';
+      position: absolute;
+      inset: 12px;
+      background: #16213e;
+      border-radius: 50%;
+    }
+
+    .score-num {
+      position: relative;
+      z-index: 1;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .result-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 10px; }
+    .result-sub { color: rgba(255,255,255,0.5); margin-bottom: 30px; }
+
+    .restart-btn {
+      padding: 14px 36px;
+      background: #e94560;
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Quiz Screen -->
+  <div id="quiz-screen">
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+    <div class="meta">
+      <span id="q-count">Question 1 of 8</span>
+      <span id="score-meta">Score: 0</span>
+    </div>
+    <div class="question" id="question"></div>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next →</button>
+  </div>
+
+  <!-- Result Screen -->
+  <div class="result-screen" id="result-screen">
+    <div class="score-circle" id="score-circle">
+      <span class="score-num" id="score-num">0/8</span>
+    </div>
+    <div class="result-title" id="result-title">Well done!</div>
+    <div class="result-sub" id="result-sub"></div>
+    <button class="restart-btn" onclick="startQuiz()">Play Again</button>
+  </div>
+</div>
+
+<script>
+  const questions = [
+    {
+      q: "What does HTML stand for?",
+      options: ["HyperText Markup Language", "High Text Machine Language", "HyperText Machine Layout", "Home Tool Markup Language"],
+      answer: 0,
+      explain: "HTML = HyperText Markup Language. It's the backbone of every web page."
+    },
+    {
+      q: "Which CSS property changes the text color?",
+      options: ["text-color", "font-color", "color", "foreground"],
+      answer: 2,
+      explain: "The 'color' property sets text color. 'background-color' sets background."
+    },
+    {
+      q: "In JavaScript, which keyword is used to declare a constant?",
+      options: ["var", "let", "const", "fix"],
+      answer: 2,
+      explain: "'const' declares a block-scoped constant. Its value cannot be reassigned."
+    },
+    {
+      q: "Which HTML tag creates a hyperlink?",
+      options: ["<link>", "<a>", "<href>", "<url>"],
+      answer: 1,
+      explain: "The <a> (anchor) tag with an 'href' attribute creates clickable hyperlinks."
+    },
+    {
+      q: "What is the CSS box model? Which property controls the space outside an element?",
+      options: ["padding", "margin", "border", "spacing"],
+      answer: 1,
+      explain: "Margin is the space outside the border. Padding is inside the border."
+    },
+    {
+      q: "Which JavaScript method is used to select an element by its ID?",
+      options: ["querySelector()", "getElementById()", "getElement()", "selectId()"],
+      answer: 1,
+      explain: "document.getElementById('id') returns the element with the matching ID."
+    },
+    {
+      q: "What does CSS stand for?",
+      options: ["Creative Style Sheets", "Cascading Style Sheets", "Computer Style Sheets", "Colorful Style Sheets"],
+      answer: 1,
+      explain: "CSS = Cascading Style Sheets. It handles the look and feel of web pages."
+    },
+    {
+      q: "Which event fires when a button is clicked in JavaScript?",
+      options: ["onpress", "onaction", "onclick", "onselect"],
+      answer: 2,
+      explain: "'onclick' is the event attribute. In addEventListener, use 'click' (no 'on' prefix)."
+    }
+  ];
+
+  let current = 0;
+  let score   = 0;
+  let answered = false;
+
+  function startQuiz() {
+    current = 0; score = 0; answered = false;
+    document.getElementById('quiz-screen').style.display = 'block';
+    document.getElementById('result-screen').style.display = 'none';
+    showQuestion();
+  }
+
+  function showQuestion() {
+    answered = false;
+    const q = questions[current];
+    const total = questions.length;
+
+    document.getElementById('progress').style.width = `${(current / total) * 100}%`;
+    document.getElementById('q-count').textContent = `Question ${current + 1} of ${total}`;
+    document.getElementById('score-meta').textContent = `Score: ${score}`;
+    document.getElementById('question').textContent = q.q;
+
+    const optDiv = document.getElementById('options');
+    optDiv.innerHTML = q.options.map((opt, i) =>
+      `<button class="option-btn" onclick="selectAnswer(${i})">${opt}</button>`
+    ).join('');
+
+    document.getElementById('feedback').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'none';
+  }
+
+  function selectAnswer(i) {
+    if (answered) return;
+    answered = true;
+
+    const q = questions[current];
+    const btns = document.querySelectorAll('.option-btn');
+
+    btns.forEach(b => b.disabled = true);
+    btns[q.answer].classList.add('correct');
+    if (i !== q.answer) btns[i].classList.add('wrong');
+    else score++;
+
+    const fb = document.getElementById('feedback');
+    fb.textContent = q.explain;
+    fb.style.display = 'block';
+    document.getElementById('next-btn').style.display = 'block';
+    document.getElementById('next-btn').textContent =
+      current === questions.length - 1 ? 'See Results' : 'Next →';
+  }
+
+  function nextQuestion() {
+    current++;
+    if (current < questions.length) {
+      showQuestion();
+    } else {
+      showResult();
+    }
+  }
+
+  function showResult() {
+    document.getElementById('quiz-screen').style.display = 'none';
+    const rs = document.getElementById('result-screen');
+    rs.style.display = 'block';
+
+    const total = questions.length;
+    const pct = Math.round((score / total) * 100);
+
+    document.getElementById('score-circle').style.setProperty('--pct', `${pct}%`);
+    document.getElementById('score-num').textContent = `${score}/${total}`;
+
+    const titles = ['Keep Practicing!', 'Not Bad!', 'Good Job!', 'Excellent!', 'Perfect! 🎉'];
+    const idx = score <= 2 ? 0 : score <= 4 ? 1 : score <= 6 ? 2 : score <= 7 ? 3 : 4;
+    document.getElementById('result-title').textContent = titles[idx];
+    document.getElementById('result-sub').textContent =
+      `You answered ${score} out of ${total} questions correctly (${pct}%).`;
+  }
+
+  startQuiz();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Color Palette Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #f5f5f5;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px 20px;
+    }
+
+    h1 { font-size: 2rem; color: #111; margin-bottom: 6px; }
+    .sub { color: #888; margin-bottom: 36px; font-size: 0.95rem; }
+
+    .controls {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    select, button {
+      padding: 12px 22px;
+      font-size: 1rem;
+      font-family: inherit;
+      border-radius: 10px;
+      border: 2px solid #ddd;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select { background: #fff; color: #333; }
+
+    .gen-btn {
+      background: #111;
+      color: #fff;
+      border-color: #111;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .gen-btn:hover { background: #333; }
+
+    .palette {
+      display: flex;
+      width: 100%;
+      max-width: 900px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+      height: 280px;
+    }
+
+    .swatch {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 20px;
+      cursor: pointer;
+      transition: flex 0.35s cubic-bezier(0.4,0,0.2,1);
+      position: relative;
+    }
+
+    .swatch:hover { flex: 1.6; }
+
+    .swatch-code {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.2);
+      color: rgba(255,255,255,0.9);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .swatch:hover .swatch-code { opacity: 1; }
+
+    .copied-toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: #111;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      transition: transform 0.3s ease;
+      pointer-events: none;
+    }
+
+    .copied-toast.show { transform: translateX(-50%) translateY(0); }
+
+    .history-section { margin-top: 48px; width: 100%; max-width: 900px; }
+    .history-title { font-size: 1rem; font-weight: 700; color: #aaa; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+
+    .history { display: flex; flex-direction: column; gap: 10px; }
+
+    .history-row {
+      display: flex;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .history-swatch {
+      flex: 1;
+      height: 36px;
+      border-radius: 6px;
+      transition: transform 0.15s;
+    }
+
+    .history-row:hover .history-swatch { transform: scaleY(1.1); }
+  </style>
+</head>
+<body>
+
+  <h1>🎨 Palette Generator</h1>
+  <p class="sub">Click a swatch to copy its HEX code</p>
+
+  <div class="controls">
+    <select id="scheme">
+      <option value="random">Random</option>
+      <option value="analogous">Analogous</option>
+      <option value="complementary">Complementary</option>
+      <option value="triadic">Triadic</option>
+      <option value="monochromatic">Monochromatic</option>
+      <option value="pastel">Pastel</option>
+      <option value="dark">Dark & Moody</option>
+    </select>
+    <button class="gen-btn" onclick="generate()">Generate Palette</button>
+  </div>
+
+  <div class="palette" id="palette"></div>
+
+  <div class="history-section">
+    <div class="history-title">History</div>
+    <div class="history" id="history"></div>
+  </div>
+
+  <div class="copied-toast" id="toast">Copied!</div>
+
+<script>
+  const history = [];
+
+  // --- Color utilities ---
+  function hslToHex(h, s, l) {
+    s /= 100; l /= 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => {
+      const k = (n + h / 30) % 12;
+      const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+      return Math.round(255 * c).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
+
+  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function generateColors(scheme) {
+    const h = rand(0, 359);
+    switch (scheme) {
+      case 'analogous':
+        return [-40,-20,0,20,40].map(d => hslToHex((h+d+360)%360, rand(60,80), rand(45,65)));
+      case 'complementary': {
+        const comp = (h + 180) % 360;
+        return [h,h,comp,comp,(h+15)%360].map((hue,i) =>
+          hslToHex(hue, rand(55,75), 30 + i*10));
+      }
+      case 'triadic':
+        return [0,72,144,216,288].map(d => hslToHex((h+d)%360, rand(55,75), rand(40,65)));
+      case 'monochromatic':
+        return [15,30,45,60,75].map(l => hslToHex(h, rand(50,70), l));
+      case 'pastel':
+        return Array.from({length:5}, (_,i) =>
+          hslToHex((h + i*70)%360, rand(40,55), rand(75,88)));
+      case 'dark':
+        return Array.from({length:5}, (_,i) =>
+          hslToHex((h + i*50)%360, rand(40,70), rand(12,30)));
+      default: // random
+        return Array.from({length:5}, () => hslToHex(rand(0,359), rand(40,80), rand(35,65)));
+    }
+  }
+
+  // --- Readable text color ---
+  function textColor(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    const lum = 0.299*r + 0.587*g + 0.114*b;
+    return lum > 140 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)';
+  }
+
+  // --- Render palette ---
+  function renderPalette(colors) {
+    const el = document.getElementById('palette');
+    el.innerHTML = colors.map(c => `
+      <div class="swatch" style="background:${c}" onclick="copyHex('${c}')">
+        <span class="swatch-code" style="color:${textColor(c)};background:rgba(0,0,0,0.2)">${c.toUpperCase()}</span>
+      </div>
+    `).join('');
+  }
+
+  // --- Generate ---
+  function generate() {
+    const scheme = document.getElementById('scheme').value;
+    const colors = generateColors(scheme);
+    renderPalette(colors);
+    addHistory(colors);
+  }
+
+  // --- History ---
+  function addHistory(colors) {
+    history.unshift(colors);
+    if (history.length > 6) history.pop();
+
+    const el = document.getElementById('history');
+    el.innerHTML = history.map((palette, idx) => `
+      <div class="history-row" onclick='loadPalette(${idx})'>
+        ${palette.map(c => `<div class="history-swatch" style="background:${c}"></div>`).join('')}
+      </div>
+    `).join('');
+  }
+
+  function loadPalette(idx) {
+    renderPalette(history[idx]);
+  }
+
+  // --- Copy ---
+  function copyHex(hex) {
+    navigator.clipboard.writeText(hex.toUpperCase()).then(() => {
+      const toast = document.getElementById('toast');
+      toast.textContent = `Copied ${hex.toUpperCase()}!`;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    });
+  }
+
+  // --- Spacebar to generate ---
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      e.preventDefault();
+      generate();
+    }
+  });
+
+  generate();
+</script>
+
+</body>
+</html>

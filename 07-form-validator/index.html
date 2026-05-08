@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Form Validator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #f7f8fc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .form-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    }
+
+    h1 { font-size: 1.8rem; color: #111; margin-bottom: 6px; }
+    .desc { color: #999; font-size: 0.9rem; margin-bottom: 36px; }
+
+    .field { margin-bottom: 22px; }
+
+    label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 8px;
+    }
+
+    .required { color: #e74c3c; margin-left: 2px; }
+
+    input, select {
+      width: 100%;
+      padding: 13px 16px;
+      border: 2px solid #e8e8e8;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #fafafa;
+      color: #111;
+    }
+
+    input:focus, select:focus {
+      border-color: #4361ee;
+      box-shadow: 0 0 0 4px rgba(67,97,238,0.1);
+      background: #fff;
+    }
+
+    input.valid { border-color: #2ed573; }
+    input.invalid { border-color: #e74c3c; }
+
+    .hint {
+      font-size: 0.8rem;
+      margin-top: 6px;
+      min-height: 18px;
+      color: #e74c3c;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .hint.ok { color: #27ae60; }
+
+    .password-wrapper { position: relative; }
+
+    .toggle-pw {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      color: #aaa;
+    }
+
+    .strength-bar {
+      height: 4px;
+      background: #eee;
+      border-radius: 4px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .strength-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s, background 0.3s;
+      width: 0;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .submit-btn:hover { background: #3451d1; }
+    .submit-btn:active { transform: scale(0.98); }
+
+    .success-banner {
+      display: none;
+      background: #eafaf1;
+      border: 1.5px solid #2ed573;
+      color: #1e8449;
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+      text-align: center;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<div class="form-card">
+  <h1>Create Account</h1>
+  <p class="desc">Fill in the form — real-time validation in action.</p>
+
+  <div class="field">
+    <label>Full Name <span class="required">*</span></label>
+    <input type="text" id="name" placeholder="John Doe" oninput="validate('name')"/>
+    <div class="hint" id="name-hint"></div>
+  </div>
+
+  <div class="field">
+    <label>Email Address <span class="required">*</span></label>
+    <input type="email" id="email" placeholder="john@example.com" oninput="validate('email')"/>
+    <div class="hint" id="email-hint"></div>
+  </div>
+
+  <div class="field">
+    <label>Phone Number</label>
+    <input type="tel" id="phone" placeholder="+91 98765 43210" oninput="validate('phone')"/>
+    <div class="hint" id="phone-hint"></div>
+  </div>
+
+  <div class="field">
+    <label>Password <span class="required">*</span></label>
+    <div class="password-wrapper">
+      <input type="password" id="password" placeholder="Min 8 chars" oninput="validate('password')"/>
+      <button class="toggle-pw" onclick="togglePw()" type="button">👁</button>
+    </div>
+    <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+    <div class="hint" id="password-hint"></div>
+  </div>
+
+  <div class="field">
+    <label>Confirm Password <span class="required">*</span></label>
+    <input type="password" id="confirm" placeholder="Repeat password" oninput="validate('confirm')"/>
+    <div class="hint" id="confirm-hint"></div>
+  </div>
+
+  <div class="field">
+    <label>Age <span class="required">*</span></label>
+    <input type="number" id="age" placeholder="Must be 18+" min="0" oninput="validate('age')"/>
+    <div class="hint" id="age-hint"></div>
+  </div>
+
+  <button class="submit-btn" onclick="submitForm()">Create Account</button>
+  <div class="success-banner" id="success">🎉 Account created successfully!</div>
+</div>
+
+<script>
+  const rules = {
+    name: v => {
+      if (!v) return [false, 'Name is required'];
+      if (v.trim().split(' ').length < 2) return [false, 'Please enter full name (first + last)'];
+      if (v.length < 3) return [false, 'Name too short'];
+      return [true, '✓ Looks good'];
+    },
+    email: v => {
+      if (!v) return [false, 'Email is required'];
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!re.test(v)) return [false, 'Invalid email format'];
+      return [true, '✓ Valid email'];
+    },
+    phone: v => {
+      if (!v) return [null, ''];
+      const digits = v.replace(/\D/g,'');
+      if (digits.length < 10) return [false, 'Too short — need at least 10 digits'];
+      if (digits.length > 15) return [false, 'Too long'];
+      return [true, '✓ Valid phone number'];
+    },
+    password: v => {
+      if (!v) return [false, 'Password is required'];
+      if (v.length < 8) return [false, 'At least 8 characters'];
+      const str = passwordStrength(v);
+      if (str < 2) return [false, 'Weak — add numbers or symbols'];
+      return [true, `✓ ${['','','Fair','Strong','Very strong'][str]} password`];
+    },
+    confirm: v => {
+      const pw = document.getElementById('password').value;
+      if (!v) return [false, 'Please confirm your password'];
+      if (v !== pw) return [false, 'Passwords do not match'];
+      return [true, '✓ Passwords match'];
+    },
+    age: v => {
+      if (!v) return [false, 'Age is required'];
+      const n = parseInt(v);
+      if (isNaN(n) || n < 0) return [false, 'Invalid age'];
+      if (n < 18) return [false, 'You must be at least 18 years old'];
+      if (n > 120) return [false, 'Invalid age'];
+      return [true, '✓ Age verified'];
+    }
+  };
+
+  function validate(id) {
+    const input = document.getElementById(id);
+    const hint  = document.getElementById(`${id}-hint`);
+    const [ok, msg] = rules[id](input.value);
+
+    if (ok === null) {
+      input.classList.remove('valid','invalid');
+      hint.textContent = '';
+    } else if (ok) {
+      input.classList.add('valid'); input.classList.remove('invalid');
+      hint.textContent = msg; hint.className = 'hint ok';
+    } else {
+      input.classList.add('invalid'); input.classList.remove('valid');
+      hint.textContent = msg; hint.className = 'hint';
+    }
+
+    // Strength bar for password
+    if (id === 'password') {
+      const str = passwordStrength(input.value);
+      const colors = ['', '#e74c3c', '#f39c12', '#f1c40f', '#2ecc71'];
+      const fill = document.getElementById('strength-fill');
+      fill.style.width = `${str * 25}%`;
+      fill.style.background = colors[str] || '#eee';
+    }
+  }
+
+  function passwordStrength(pw) {
+    let s = 0;
+    if (pw.length >= 8) s++;
+    if (/[A-Z]/.test(pw)) s++;
+    if (/[0-9]/.test(pw)) s++;
+    if (/[^A-Za-z0-9]/.test(pw)) s++;
+    return s;
+  }
+
+  function togglePw() {
+    const inp = document.getElementById('password');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  function submitForm() {
+    const fields = ['name','email','password','confirm','age'];
+    fields.forEach(validate);
+    // Also revalidate optional phone if filled
+    if (document.getElementById('phone').value) validate('phone');
+
+    const allValid = fields.every(id => {
+      const input = document.getElementById(id);
+      return input.classList.contains('valid');
+    });
+
+    if (allValid) {
+      document.getElementById('success').style.display = 'block';
+      document.getElementById('success').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+</script>
+
+</body>
+</html>

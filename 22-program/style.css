@@ -1,0 +1,9 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI'; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.container { max-width: 600px; background: white; border-radius: 12px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+h1 { text-align: center; color: #333; margin-bottom: 25px; }
+textarea { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 1rem; min-height: 120px; margin-bottom: 20px; }
+.buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+button { padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+button:hover { opacity: 0.9; }
+.output { background: #f5f5f5; padding: 15px; border-radius: 6px; min-height: 100px; word-wrap: break-word; }

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Digital Clock</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a0a;
+      font-family: 'Courier New', monospace;
+    }
+
+    .clock-wrapper {
+      text-align: center;
+    }
+
+    .date {
+      font-size: 1.1rem;
+      letter-spacing: 0.3em;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .clock {
+      font-size: clamp(3rem, 10vw, 7rem);
+      font-weight: 700;
+      color: #00ff88;
+      text-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+      letter-spacing: 0.05em;
+    }
+
+    .clock .colon {
+      animation: blink 1s step-start infinite;
+      display: inline-block;
+      width: 0.3em;
+      text-align: center;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .period {
+      font-size: 1.8rem;
+      color: #00cc66;
+      margin-left: 10px;
+      vertical-align: super;
+    }
+
+    .timezone {
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: #333;
+      letter-spacing: 0.2em;
+    }
+
+    .back-link {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #00ff88;
+      text-decoration: none;
+      font-size: 0.9rem;
+      border: 1px solid #00ff88;
+      padding: 8px 16px;
+      border-radius: 4px;
+      transition: all 0.3s;
+    }
+
+    .back-link:hover {
+      background: #00ff88;
+      color: #0a0a0a;
+    }
+  </style>
+</head>
+<body>
+
+  <a href="../" class="back-link">← Back to Projects</a>
+
+  <div class="clock-wrapper">
+    <div class="date" id="date">---</div>
+    <div class="clock">
+      <span id="hours">00</span>
+      <span class="colon">:</span>
+      <span id="minutes">00</span>
+      <span class="colon">:</span>
+      <span id="seconds">00</span>
+      <span class="period" id="period">AM</span>
+    </div>
+    <div class="timezone" id="timezone"></div>
+  </div>
+
+  <script>
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function updateClock() {
+      const now = new Date();
+
+      // Hours (12-hour format)
+      let h = now.getHours();
+      const period = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+
+      const m = now.getMinutes();
+      const s = now.getSeconds();
+
+      document.getElementById('hours').textContent   = String(h).padStart(2, '0');
+      document.getElementById('minutes').textContent = String(m).padStart(2, '0');
+      document.getElementById('seconds').textContent = String(s).padStart(2, '0');
+      document.getElementById('period').textContent  = period;
+
+      // Date
+      document.getElementById('date').textContent =
+        `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+      // Timezone
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      document.getElementById('timezone').textContent = tz;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+
+</body>
+</html>
